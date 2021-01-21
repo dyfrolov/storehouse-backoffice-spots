@@ -6,7 +6,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import storehouse.backoffice.spots.domain.entities.EntitySpot;
 
-public interface SpotRepoMongo extends MongoRepository<EntitySpot, String> {
+public interface ISpotRepoMongo extends MongoRepository<EntitySpot, String> {
 
 	List<EntitySpot> findAllBySpotCoordRowAndSpotCoordShelfAndSpotCoordPlace(Integer row, Integer shelf, Integer place);
 

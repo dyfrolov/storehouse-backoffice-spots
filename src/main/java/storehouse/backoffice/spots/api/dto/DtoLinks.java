@@ -1,4 +1,4 @@
-package storehouse.backoffice.spots.api;
+package storehouse.backoffice.spots.api.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

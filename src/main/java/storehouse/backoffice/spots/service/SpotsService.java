@@ -11,21 +11,24 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
-import storehouse.backoffice.spots.api.DtoLinks;
-import storehouse.backoffice.spots.api.DtoProduct;
-import storehouse.backoffice.spots.api.DtoSpot;
-import storehouse.backoffice.spots.api.DtoSpotCoord;
-import storehouse.backoffice.spots.api.DtoSpotsPaginated;
+import lombok.extern.slf4j.Slf4j;
 import storehouse.backoffice.spots.api.ReturnCodes;
-import storehouse.backoffice.spots.domain.dao.SpotRepoMongo;
+import storehouse.backoffice.spots.api.dto.DtoLinks;
+import storehouse.backoffice.spots.api.dto.DtoProduct;
+import storehouse.backoffice.spots.api.dto.DtoSpot;
+import storehouse.backoffice.spots.api.dto.DtoSpotCoord;
+import storehouse.backoffice.spots.api.dto.DtoSpotsPaginated;
+import storehouse.backoffice.spots.domain.dao.ISpotRepoMongo;
 import storehouse.backoffice.spots.domain.entities.EntityProduct;
 import storehouse.backoffice.spots.domain.entities.EntitySpot;
 import storehouse.backoffice.spots.domain.entities.EntitySpotCoord;
+import storehouse.backoffice.spots.interfaces.ISpots;
 
+@Slf4j
 @Service
 public class SpotsService implements ISpots {
 	@Autowired
-	SpotRepoMongo repo;
+	ISpotRepoMongo repo;
 
 	@Value("${server.hostname:localhost}")
 	String hostname;
@@ -124,6 +127,7 @@ public class SpotsService implements ISpots {
 	@Override
 	public ReturnCodes addSpot(DtoSpot dtoSpot) {
 		if (dtoSpot == null || dtoSpot.getSpotCoord()==null || dtoSpot.getProduct()==null) {
+			log.error("Error addSpot - wrong parameters. DtoSpot: {}", dtoSpot);
 			return ReturnCodes.WRONG_PARAMETERS;
 		}
 		boolean isSpotExists = repo.existsBySpotCoordRowAndSpotCoordShelfAndSpotCoordPlace(
@@ -131,17 +135,19 @@ public class SpotsService implements ISpots {
 				dtoSpot.getSpotCoord().getShelf(),
 				dtoSpot.getSpotCoord().getPlace() );
 		if ( isSpotExists ) {
+			log.warn("Warning addSpot - spot already exists. DtoSpot: {}", dtoSpot);
 			return ReturnCodes.ALREADY_EXISTS;
 		}
+		EntitySpot entitySpot = mapDtoSpotToEntitySpot(dtoSpot);
 		try {
-			EntitySpot entitySpot = mapDtoSpotToEntitySpot(dtoSpot);
 			repo.save(entitySpot);
+			log.debug("Saved addSpot entity:{} ",entitySpot);
 			return ReturnCodes.OK;
 		}catch(IllegalArgumentException e) {
-			System.out.println("###Error addSpot "+e.getMessage());
+			log.error("Error addSpot entity:{} ERROR:{}",entitySpot, e.getMessage());
 			return ReturnCodes.WRONG_PARAMETERS;
 		}catch (Exception e) {
-			System.out.println("###Error addSpot "+e.getMessage());
+			log.error("Error addSpot entity:{} ERROR:{}",entitySpot, e.getMessage());
 			return ReturnCodes.CRUD_OPERATION_UNSUCCESSFUL;
 		}
 	}
@@ -173,6 +179,7 @@ public class SpotsService implements ISpots {
 	@Override
 	public ReturnCodes updateSpot(DtoSpot dtoSpot) {
 		if (dtoSpot == null || dtoSpot.getSpotCoord()==null || dtoSpot.getProduct()==null) {
+			log.error("Error updateSpot - wrong parameters. DtoSpot: {}", dtoSpot);
 			return ReturnCodes.WRONG_PARAMETERS;
 		}
 		EntitySpot oldEntitySpot = repo.findBySpotCoordRowAndSpotCoordShelfAndSpotCoordPlace(
@@ -180,18 +187,20 @@ public class SpotsService implements ISpots {
 				dtoSpot.getSpotCoord().getShelf(),
 				dtoSpot.getSpotCoord().getPlace() );
 		if ( oldEntitySpot == null ) {
+			log.error("Error updateSpot - entity does not exist. DtoSpot: {}", dtoSpot);
 			return ReturnCodes.NOT_EXISTS;
 		}
+		EntitySpot newEntitySpot = mapDtoSpotToEntitySpot(dtoSpot);
 		try {
-			EntitySpot newEntitySpot = mapDtoSpotToEntitySpot(dtoSpot);
 			repo.delete(oldEntitySpot);
 			repo.save(newEntitySpot);
+			log.debug("Updated spot. New entity: {}. Old entity: {}",newEntitySpot,oldEntitySpot);
 			return ReturnCodes.OK;
 		}catch(IllegalArgumentException e) {
-			System.out.println("###Error updateSpot "+e.getMessage());
+			log.error("Error updateSpot. New entity: {}. Old entity: {}. Error: {}",newEntitySpot,oldEntitySpot,e.getMessage());
 			return ReturnCodes.WRONG_PARAMETERS;
 		}catch (Exception e) {
-			System.out.println("###Error updateSpot "+e.getMessage());
+			log.error("Error updateSpot. New entity: {}. Old entity: {}. Error: {}",newEntitySpot,oldEntitySpot,e.getMessage());
 			return ReturnCodes.CRUD_OPERATION_UNSUCCESSFUL;
 		}
 	}
@@ -200,6 +209,7 @@ public class SpotsService implements ISpots {
 	@Override
 	public ReturnCodes deleteSpot(DtoSpot dtoSpot) {
 		if (dtoSpot == null || dtoSpot.getSpotCoord()==null || dtoSpot.getProduct()==null) {
+			log.error("Error deleteSpot - wrong parameters. DtoSpot: {}", dtoSpot);
 			return ReturnCodes.WRONG_PARAMETERS;
 		}
 		EntitySpot entitySpot = repo.findBySpotCoordRowAndSpotCoordShelfAndSpotCoordPlace(
@@ -207,22 +217,25 @@ public class SpotsService implements ISpots {
 				dtoSpot.getSpotCoord().getShelf(),
 				dtoSpot.getSpotCoord().getPlace() );
 		if ( entitySpot == null ) {
+			log.error("Error deleteSpot - entity does not exist. DtoSpot: {}", dtoSpot);
 			return ReturnCodes.NOT_EXISTS;
 		}
 		try {
 			repo.delete(entitySpot);
+			log.debug("Deleted spot. Entity: {}",entitySpot);
 			return ReturnCodes.OK;
 		}catch(IllegalArgumentException e) {
-			System.out.println("###Error deleteSpot "+e.getMessage());
+			log.error("Error deleteSpot. Entity: {}. Error: {}",entitySpot,e.getMessage());
 			return ReturnCodes.WRONG_PARAMETERS;
 		}catch (Exception e) {
-			System.out.println("###Error deleteSpot "+e.getMessage());
+			log.error("Error deleteSpot. Entity: {}. Error: {}",entitySpot,e.getMessage());
 			return ReturnCodes.CRUD_OPERATION_UNSUCCESSFUL;
 		}
 	}
 	@Override
 	public ReturnCodes deleteSpot(int row, int shelf, int place) {
 		if (row < 0 || shelf < 0 || place < 0) {
+			log.error("Error deleteSpot - wrong parameters. Row: {}, shelf: {}, place: {}",row,shelf,place);
 			return ReturnCodes.WRONG_PARAMETERS;
 		}
 		EntitySpot entitySpot = repo.findBySpotCoordRowAndSpotCoordShelfAndSpotCoordPlace(
@@ -230,16 +243,18 @@ public class SpotsService implements ISpots {
 				shelf,
 				place );
 		if ( entitySpot == null ) {
+			log.error("Error deleteSpot - spot does not exists. Row: {}, shelf: {}, place: {}",row,shelf,place);
 			return ReturnCodes.NOT_EXISTS;
 		}
 		try {
 			repo.delete(entitySpot);
+			log.debug("Deleted spot. Entity: {}",entitySpot);
 			return ReturnCodes.OK;
 		}catch(IllegalArgumentException e) {
-			System.out.println("###Error deleteSpot "+e.getMessage());
+			log.error("Error deleteSpot. Entity: {}. Error: {}",entitySpot,e.getMessage());
 			return ReturnCodes.WRONG_PARAMETERS;
 		}catch (Exception e) {
-			System.out.println("###Error deleteSpot "+e.getMessage());
+			log.error("Error deleteSpot. Entity: {}. Error: {}",entitySpot,e.getMessage());
 			return ReturnCodes.CRUD_OPERATION_UNSUCCESSFUL;
 		}
 	}

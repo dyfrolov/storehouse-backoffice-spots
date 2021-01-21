@@ -1,10 +1,10 @@
-package storehouse.backoffice.spots.service;
+package storehouse.backoffice.spots.interfaces;
 
 import java.util.List;
 
-import storehouse.backoffice.spots.api.DtoSpot;
-import storehouse.backoffice.spots.api.DtoSpotsPaginated;
 import storehouse.backoffice.spots.api.ReturnCodes;
+import storehouse.backoffice.spots.api.dto.DtoSpot;
+import storehouse.backoffice.spots.api.dto.DtoSpotsPaginated;
 
 public interface ISpots {
 	DtoSpot getOneSpotInfo(int row, int shelf, int place);
